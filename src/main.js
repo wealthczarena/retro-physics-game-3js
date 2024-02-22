@@ -20,14 +20,78 @@ const scene = new THREE.Scene()
 /**
  * Test Plane
  */
-const geo = new THREE.PlaneGeometry(10, 10)
-const mat = new THREE.MeshBasicMaterial({ 
-    color: 0xffff00,
-    side: THREE.DoubleSide
- })
-const plane = new THREE.Mesh(geo, mat)
-plane.rotation.x = - Math.PI * 0.5
-scene.add(plane)
+// const geo = new THREE.PlaneGeometry(10, 10)
+// const mat = new THREE.MeshBasicMaterial({ 
+//     color: 0xffff00,
+//     side: THREE.DoubleSide
+//  })
+// const plane = new THREE.Mesh(geo, mat)
+// plane.rotation.x = - Math.PI * 0.5
+// scene.add(plane)
+
+/**
+ * Test Retro Grid
+ */
+const division = 20
+const limit = 100
+const grid = new THREE.GridHelper(limit * 2, division, 0xffff00, 0xffff00)
+
+const moveable = new Uint8Array(division * division)
+for (let i = 0; i <= moveable.length; i++) {
+    moveable[i] = Math.random() > 0.5 ? 1 : 0
+}
+
+const moveableAttribute = new THREE.BufferAttribute(new Uint8Array(moveable, 1))
+
+grid.geometry.setAttribute('moveable', moveableAttribute)
+
+grid.material = new THREE.ShaderMaterial({
+    uniforms: {
+        time: {
+            value: 0
+        },
+        limits: {
+            value: new THREE.Vector2(-limit, limit)
+        },
+        speed: {
+            value: 5
+        }
+    },
+    vertexShader: `
+        uniform float time;
+        uniform vec2 limits;
+        uniform float speed;
+
+        attribute vec3 color;
+        attribute float moveable;
+
+        varying vec3 vColor;
+
+        void main() {
+            vColor = color;
+            float limLen = limits.y - limits.x;
+            vec3 pos = position;
+            if (floor(moveable + 0.5) > 0.5) { 
+                float dist = speed * time;
+                float currPos = mod((pos.z + dist) - limits.x, limLen) + limits.x;
+                pos.z = currPos;
+              } 
+              gl_Position = projectionMatrix * modelViewMatrix * vec4(pos,1.0);
+        }
+    `,
+    fragmentShader: `
+        varying vec3 vColor;
+        
+        void main() {
+            gl_FragColor = vec4(vColor, 1.0);
+        }
+    `,
+})
+grid.material.vertexColors = THREE.VertexColors
+
+scene.add(grid)
+
+
 
 /**
  * Sizes
